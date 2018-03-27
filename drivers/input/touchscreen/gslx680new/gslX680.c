@@ -60,6 +60,7 @@
 #include "gslX680.h"
 #include "gslX680_inetd71.h"
 #include "gsl1680e_p2.h"
+#include "gsl3676_1280x800.h"
 
 
 struct gslX680_fw_array {
@@ -67,13 +68,19 @@ struct gslX680_fw_array {
 	unsigned int size;
 	const struct fw_data *fw;
 } gslx680_fw_grp[] = {
-	{"gslX680_inetd71"  ,  ARRAY_SIZE(GSLX680_FW_INETD71),GSLX680_FW_INETD71},
-	{"gsl1680e_p2"  ,  ARRAY_SIZE(GSL1680E_FW_P2),GSL1680E_FW_P2},
+    {"gslX680_inetd71"  ,  ARRAY_SIZE(GSLX680_FW_INETD71),GSLX680_FW_INETD71},
+    {"gsl1680e_p2"  ,  ARRAY_SIZE(GSL1680E_FW_P2),GSL1680E_FW_P2},
+    {"gsl3676_1280800_ogs_dz"  ,  ARRAY_SIZE(FW_U680C_GSL3676B_1280800_OGS_DZ), FW_U680C_GSL3676B_1280800_OGS_DZ},
+    {"gsl3676_1280800_ogs_sg"  ,  ARRAY_SIZE(FW_U680_GSL3676B_1280800_OGS_SG), FW_U680_GSL3676B_1280800_OGS_SG},
+    {"gsl3676_1280800_ogs_xcl"  ,  ARRAY_SIZE(FW_U680_GSL3676B_1280800_OGS_XCL), FW_U680_GSL3676B_1280800_OGS_XCL},
 };
 
 unsigned int *gslX680_config_data[16] = {
-    gsl_config_data_id_K71_OGS_1024600,     
+    gsl_config_data_id_K71_OGS_1024600,
     gsl_config_data_id_P2,
+    gsl_config_data_id_U680C_GSL3676B_1280800_OGS_DZ,
+    gsl_config_data_id_U680_GSL3676B_1280800_OGS_SG,
+    gsl_config_data_id_U680_GSL3676B_1280800_OGS_XCL,
 };
 
 #define FOR_TSLIB_TEST
@@ -1395,6 +1402,7 @@ static int gsl_ts_suspend(struct i2c_client *client, pm_message_t mesg)
                 cancel_work_sync(&ts->work);
                 flush_workqueue(ts->wq);
                 gslX680_shutdown_low(); 
+                input_set_power_enable(&(config_info.input_type), 1);
         }
         
         return 0;
@@ -1410,6 +1418,8 @@ static int gsl_ts_resume(struct i2c_client *client)
   	dprintk(DEBUG_SUSPEND,"I'am in gsl_ts_resume() start\n");
   	cancel_work_sync(&ts->work);
 	flush_workqueue(ts->wq);
+    input_set_power_enable(&(config_info.input_type), 1);
+    msleep(10);
 	queue_work(gslX680_resume_wq, &glsX680_resume_work);
 	
 #ifdef GSL_TIMER
@@ -1736,6 +1746,9 @@ static int __init gsl_ts_init(void)
 		printk("%s:read config fail!\n",__func__);
 		return ret;
 	}
+
+    input_set_power_enable(&(config_info.input_type), 1);
+    msleep(10);
 	ctp_wakeup(1,0);
 
 	ret = i2c_add_driver(&gsl_ts_driver);
