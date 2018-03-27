@@ -84,9 +84,6 @@ int platform_wifi_power_on(void)
 	}
 
 #ifdef CONFIG_GPIO_WAKEUP
-#ifdef CONFIG_RTL8723B
-	type = script_get_item("wifi_para", "rtl8723bs_wl_host_wake", &val);
-#endif
 #ifdef CONFIG_RTL8188E
 	type = script_get_item("wifi_para", "rtl8189es_host_wake", &val);
 #endif
