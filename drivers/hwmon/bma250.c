@@ -68,6 +68,7 @@ module_param_named(debug_mask, debug_mask, int, 0644);
 #define BMA150_CHIP_ID                          2
 #define BMA250_CHIP_ID                          3
 #define BMA250E_CHIP_ID                         0xF9
+#define BMA223_CHIP_ID                          0xF8
 #define BMA250_RANGE_SET                        0
 #define BMA250_BW_SET                           4
 
@@ -283,25 +284,32 @@ static int gsensor_detect(struct i2c_client *client, struct i2c_board_info *info
 			client->addr = i2c_address[i2c_num];
 			pr_info("%s:addr= 0x%x,i2c_num:%d\n",__func__,client->addr,i2c_num);
 			ret = i2c_smbus_read_byte_data(client,BMA250_CHIP_ID_REG);
-			pr_info("Read ID value is :%d",ret);
+            pr_info("Read ID value is: %d",ret);
 			if ((ret &0x00FF) == BMA250_CHIP_ID) {
-				pr_info("Bosch Sensortec Device detected!\n" );
+                pr_info("Bosch Sensortec Device detected!\n");
 				strlcpy(info->type, SENSOR_NAME, I2C_NAME_SIZE);
 				return 0; 
     
-			} else if((ret &0x00FF) == BMA150_CHIP_ID) {
+            } else if ((ret &0x00FF) == BMA150_CHIP_ID) {
             	  	
 				pr_info("Bosch Sensortec Device detected!\n" \
-					"BMA150 registered I2C driver!\n");  
+                        "BMA150 registered I2C driver!\n");
 				strlcpy(info->type, SENSOR_NAME, I2C_NAME_SIZE);
 				return 0; 
-			} else if((ret &0x00FF) == BMA250E_CHIP_ID) {
+            } else if ((ret &0x00FF) == BMA250E_CHIP_ID) {
             	  	
 				pr_info("Bosch Sensortec Device detected!\n" \
-					"BMA250E registered I2C driver!\n");  
+                        "BMA250E registered I2C driver!\n");
 				strlcpy(info->type, SENSOR_NAME, I2C_NAME_SIZE);
 				return 0; 
-			}                                                                                                               
+            } else if ((ret &0x00FF) == BMA223_CHIP_ID) {
+
+                pr_info("Bosch Sensortec Device detected!\n" \
+                        "BMA223 registered I2C driver!\n");
+                strlcpy(info->type, SENSOR_NAME, I2C_NAME_SIZE);
+                return 0;
+            }
+
 		}
         
 		pr_info("%s:Bosch Sensortec Device not found, \
