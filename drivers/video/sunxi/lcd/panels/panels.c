@@ -8,6 +8,7 @@ extern __lcd_panel_t vvx10f004b00_panel;
 extern __lcd_panel_t lp907qx_panel;
 extern __lcd_panel_t sl698ph_720p_panel;
 extern __lcd_panel_t lp079x01_panel;
+extern __lcd_panel_t inet_dsi_panel;
 
 __lcd_panel_t* panel_array[] = {
 	&default_panel,
@@ -17,6 +18,7 @@ __lcd_panel_t* panel_array[] = {
 	&starry768x1024_panel,
 	&sl698ph_720p_panel,
 	&lp079x01_panel,
+    &inet_dsi_panel,
 	/* add new panel below */
 
 	NULL,
