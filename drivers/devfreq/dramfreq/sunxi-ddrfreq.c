@@ -852,7 +852,7 @@ static int ddrfreq_target(struct device *dev, unsigned long *freq, u32 flags)
 	mutex_lock(&ddrfreq_lock);
 
 	if (!ddrfreq_enable) {
-		DDRFREQ_ERR("unsupported, please enable in sysconfig\n");
+        DDRFREQ_ERR("unsupported, please enable in sysconfig\n");
 		goto unlock;
 	}
 
@@ -1274,6 +1274,7 @@ static __devinit int sunxi_ddrfreq_probe(struct platform_device *pdev)
 	DDRFREQ_DBG(DEBUG_INIT, "dram_tpr13 value is 0x%x\n", val.val);
 	dram_para.dram_tpr13 = val.val;
 	ddrfreq_enable = (dram_para.dram_tpr13 >> 11) & 0x1;
+    ddrfreq_enable = true;
 #ifdef CONFIG_ARCH_SUN8IW5P1
 	mdfs_in_cfs = (dram_para.dram_tpr13 >> 10) & 0x1;
 #endif
