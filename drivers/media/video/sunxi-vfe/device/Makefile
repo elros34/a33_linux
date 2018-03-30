@@ -4,6 +4,7 @@ obj-m			+= ov7736.o
 obj-m			+= s5k4ec.o
 obj-m			+= s5k4ec_mipi.o
 obj-m			+= gc2035.o
+obj-m			+= gc2145.o
 obj-m			+= gt2005.o
 obj-m			+= gc0307.o
 obj-m			+= gc0308.o

@@ -80,17 +80,18 @@ __s32 camera_gpio_release(__hdle p_handler, __s32 if_release_to_default_status)
 
 __s32 camera_gpio_write(__camera_gpio_set_t *gpio_list, __u32 gpio_value)
 {
-    __camera_gpio_set_t  gpio_info[1];
-    __hdle hdl;
+    __gpio_set_value(gpio_list->gpio, gpio_value);
+ //   __camera_gpio_set_t  gpio_info[1];
+ //   __hdle hdl;
     
-    if (gpio_list->gpio) {
-        memcpy(gpio_info, gpio_list, sizeof(__camera_gpio_set_t));
+ //   if (gpio_list->gpio) {
+ //       memcpy(gpio_info, gpio_list, sizeof(__camera_gpio_set_t));
         
-        gpio_info->data = gpio_value;
+ //       gpio_info->data = gpio_value;
         
-        hdl = camera_gpio_request(gpio_info, 1);
-        camera_gpio_release(hdl, 2);
-    }
+ //       hdl = camera_gpio_request(gpio_info, 1);
+ //       camera_gpio_release(hdl, 2);
+ //   }
 
     return 0;
 }
@@ -450,6 +451,148 @@ static __s32 camera_detect_gc2035(__u32 list_index, struct i2c_adapter *i2c_adap
     return 0;
 }
 
+#define __GC2145__
+
+static void camera_pwr_on_gc2145(__u32 list_index, __camera_info_t *camera_info)
+{
+    camera_gpio_set_status(camera_info->stby_pin, 1);
+    camera_gpio_set_status(camera_info->reset_pin, 1);
+
+    //power supply
+    camera_gpio_write(camera_info->stby_pin, camera_list[list_index].CSI_STBY_ON);
+    camera_gpio_write(camera_info->reset_pin, camera_list[list_index].CSI_RST_ON);
+    msleep(1);
+    clk_enable(camera_info->module_clk);
+    msleep(10);
+    camera_gpio_write(camera_info->pwr_pin, camera_list[list_index].CSI_PWR_ON);
+    msleep(10);
+
+    if(camera_info->dvdd)
+    {
+        if(camera_info->dvdd_vol > 0)
+        {
+            regulator_set_voltage(camera_info->dvdd,camera_info->dvdd_vol,camera_info->dvdd_vol);
+        }
+        else
+        {
+            list_print("dvdd_vol is NULL!! n");
+        }
+        regulator_enable(camera_info->dvdd);
+        msleep(10);
+    }
+
+    if(camera_info->avdd)
+    {
+        if(camera_info->dvdd_vol > 0)
+        {
+            regulator_set_voltage(camera_info->avdd,camera_info->avdd_vol,camera_info->avdd_vol);
+        }
+        else
+        {
+            list_print("dvdd_vol is NULL!! n");
+        }
+        regulator_enable(camera_info->avdd);
+        msleep(10);
+    }
+
+    if(camera_info->iovdd)
+    {
+        if(camera_info->dvdd_vol > 0)
+        {
+            regulator_set_voltage(camera_info->iovdd,camera_info->iovdd_vol,camera_info->iovdd_vol);
+        }
+        else
+        {
+            list_print("dvdd_vol is NULL!! n");
+        }
+
+        regulator_enable(camera_info->iovdd);
+        msleep(10);
+    }
+
+    //standby off io
+    camera_gpio_write(camera_info->stby_pin, camera_list[list_index].CSI_STBY_OFF);
+    msleep(10);
+    camera_gpio_write(camera_info->reset_pin, camera_list[list_index].CSI_RST_OFF);
+    msleep(10);
+    camera_gpio_write(camera_info->reset_pin, camera_list[list_index].CSI_RST_ON);
+    msleep(10);
+    camera_gpio_write(camera_info->reset_pin, camera_list[list_index].CSI_RST_OFF);
+    msleep(10);
+}
+
+static void camera_pwr_off_gc2145(__u32 list_index, __camera_info_t *camera_info)
+{
+    camera_gpio_write(camera_info->stby_pin, camera_list[list_index].CSI_STBY_ON);
+    msleep(10);
+
+    //reset on io
+    camera_gpio_write(camera_info->reset_pin, camera_list[list_index].CSI_RST_ON);
+    msleep(10);
+
+    //inactive mclk after power off
+
+    //power supply off
+    if(camera_info->iovdd) {
+        regulator_disable(camera_info->iovdd);
+    }
+
+    if(camera_info->avdd) {
+        regulator_disable(camera_info->avdd);
+    }
+
+    if(camera_info->dvdd) {
+        regulator_disable(camera_info->dvdd);
+    }
+
+    camera_gpio_write(camera_info->pwr_pin, camera_list[list_index].CSI_PWR_OFF);
+    msleep(10);
+
+    //standby of io
+    clk_disable(camera_info->module_clk);
+
+    //set the io to hi-z
+    camera_gpio_set_status(camera_info->reset_pin, 0);//set the gpio to input
+
+    // camera_gpio_set_status(camera_info->stby_pin, 0);//set the gpio to input
+}
+
+static __s32 camera_detect_gc2145(__u32 list_index, struct i2c_adapter *i2c_adap)
+{
+    char reg_num[1], value[1];
+    __s32 ret = 0;
+    __u32 i2c_addr = camera_list[list_index].i2c_addr;
+    __u32 addr_step = camera_list[list_index].REG_ADDR_STEP;
+    __u32 data_step = camera_list[list_index].REG_DATA_STEP;
+
+    list_print("try to detect gc2145 ... \n");
+
+    reg_num[0] = 0xf0;
+    ret = camera_i2c_read(i2c_adap, reg_num, value, i2c_addr, addr_step, data_step);
+    if (ret < 0) {
+        return ret;
+    }
+
+    pr_info("gc2145 i2c read0: 0x%02x\n", value[0]);
+
+    if(value[0] !=0x21)
+        return -ENODEV;
+
+    reg_num[0] = 0xf1;
+    ret = camera_i2c_read(i2c_adap, reg_num, value, i2c_addr, addr_step, data_step);
+    if (ret < 0) {
+        return ret;
+    }
+
+    pr_info("gc2145 i2c read1: 0x%02x\n", value[0]);
+
+    if(value[0] !=0x45)
+        return -ENODEV;
+
+    list_print("detect gc2145 success!!\n");
+
+    return 0;
+}
 
 #define __GC0308__
 
@@ -570,6 +713,126 @@ static __s32 camera_detect_gc0308(__u32 list_index, struct i2c_adapter *i2c_adap
 	
 	list_print("detect gc0308 success!!\n");
     
+    return 0;
+}
+
+#define __GC0328__
+
+static void camera_pwr_on_gc0328(__u32 list_index, __camera_info_t *camera_info)
+{
+    camera_gpio_set_status(camera_info->stby_pin, 1);
+    camera_gpio_set_status(camera_info->reset_pin, 1);
+
+    //power supply
+    camera_gpio_write(camera_info->pwr_pin, camera_list[list_index].CSI_PWR_ON);
+    if(camera_info->dvdd)
+    {
+        if(camera_info->dvdd_vol > 0)
+        {
+            regulator_set_voltage(camera_info->dvdd,camera_info->dvdd_vol,camera_info->dvdd_vol);
+        }
+        else
+        {
+            list_print("dvdd_vol is NULL!! \n");
+        }
+        regulator_enable(camera_info->dvdd);
+        msleep(10);
+    }
+    if(camera_info->avdd)
+    {
+        if(camera_info->dvdd_vol > 0)
+        {
+            regulator_set_voltage(camera_info->avdd,camera_info->avdd_vol,camera_info->avdd_vol);
+        }
+        else
+        {
+            list_print("dvdd_vol is NULL!! \n");
+        }
+        regulator_enable(camera_info->avdd);
+        msleep(10);
+    }
+    if(camera_info->iovdd)
+    {
+        if(camera_info->dvdd_vol > 0)
+        {
+            regulator_set_voltage(camera_info->iovdd,camera_info->iovdd_vol,camera_info->iovdd_vol);
+        }
+        else
+        {
+            list_print("dvdd_vol is NULL!! \n");
+        }
+        regulator_enable(camera_info->iovdd);
+        msleep(10);
+    }
+    msleep(10);
+
+    clk_prepare_enable(camera_info->module_clk);
+    msleep(10);
+
+    //standby off io
+    camera_gpio_write(camera_info->stby_pin, camera_list[list_index].CSI_STBY_OFF);
+    msleep(10);
+    camera_gpio_write(camera_info->reset_pin, camera_list[list_index].CSI_RST_ON);
+    msleep(30);
+    camera_gpio_write(camera_info->reset_pin, camera_list[list_index].CSI_RST_OFF);
+    msleep(10);
+}
+
+static void camera_pwr_off_gc0328(__u32 list_index, __camera_info_t *camera_info)
+{
+    //reset on io
+    camera_gpio_write(camera_info->reset_pin, camera_list[list_index].CSI_RST_ON);
+    msleep(10);
+    //inactive mclk after power off
+    clk_disable_unprepare(camera_info->module_clk);
+    //power supply off
+    if(camera_info->iovdd) {
+        regulator_disable(camera_info->iovdd);
+    }
+    if(camera_info->avdd) {
+        regulator_disable(camera_info->avdd);
+    }
+    if(camera_info->dvdd) {
+        regulator_disable(camera_info->dvdd);
+    }
+    camera_gpio_write(camera_info->pwr_pin, camera_list[list_index].CSI_PWR_OFF);
+    msleep(10);
+    //standby of io
+    camera_gpio_write(camera_info->stby_pin, camera_list[list_index].CSI_STBY_ON);
+    msleep(10);
+    //set the io to hi-z
+    camera_gpio_set_status(camera_info->reset_pin, 0);//set the gpio to input
+    //camera_gpio_set_status(camera_info->stby_pin, 0);//set the gpio to input
+}
+
+static __s32 camera_detect_gc0328(__u32 list_index, struct i2c_adapter *i2c_adap)
+{
+    char reg_num[1], value[1];
+    __s32 ret = 0;
+    __u32 i2c_addr  = camera_list[list_index].i2c_addr;
+    __u32 addr_step = camera_list[list_index].REG_ADDR_STEP;
+    __u32 data_step = camera_list[list_index].REG_DATA_STEP;
+
+    list_print("try to detect gc0328 ... \n");
+
+    reg_num[0] = 0xfe;
+    value[0] = 0x00; //PAGE 0x00
+    ret = camera_i2c_write(i2c_adap, reg_num, value, i2c_addr, addr_step, data_step);
+    if (ret < 0) {
+        return ret;
+    }
+
+    reg_num[0] = 0xf0;
+    ret = camera_i2c_read(i2c_adap, reg_num, value, i2c_addr, addr_step, data_step);
+    if (ret < 0) {
+        return ret;
+    }
+
+    if(value[0] != 0x9d)
+        return -ENODEV;
+
+    list_print("detect gc0328 success!!\n");
+
     return 0;
 }
 
@@ -2879,7 +3142,9 @@ static __s32 camera_detect_ov5650_mv9335(__u32 list_index, struct i2c_adapter *i
 __camera_list_t camera_list[MAX_CAMERA_LIST_ITEM] = {
     CAMERA_LIST_ITEM_INIT(ov7670,        1, 1, 0x42, 1, 0, 0, 1, 1, 0),
     CAMERA_LIST_ITEM_INIT(gc2035,        1, 1, 0x78, 1, 0, 0, 1, 1, 0),
-    CAMERA_LIST_ITEM_INIT(gc0308,        1, 1, 0x42, 1, 0, 0, 1, 1, 0), 
+    CAMERA_LIST_ITEM_INIT(gc2145,        1, 1, 0x78, 1, 0, 0, 1, 1, 0),
+    CAMERA_LIST_ITEM_INIT(gc0308,        1, 1, 0x42, 1, 0, 0, 1, 1, 0),
+    CAMERA_LIST_ITEM_INIT(gc0328,        1, 1, 0x42, 1, 0, 0, 1, 1, 0),
     CAMERA_LIST_ITEM_INIT(gt2005,        2, 1, 0x78, 0, 1, 0, 1, 1, 0),
     CAMERA_LIST_ITEM_INIT(hi704,         1, 1, 0x60, 1, 0, 0, 1, 1, 0),
     CAMERA_LIST_ITEM_INIT(sp0838,        1, 1, 0x30, 1, 0, 0, 1, 1, 0),
