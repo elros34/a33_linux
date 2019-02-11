@@ -827,16 +827,15 @@ s32 DRV_disp_vsync_event(u32 sel)
 	return 0;
 }
 
+static ssize_t vsync0_time(struct device *dev, struct device_attribute *attr, char *buff)
+{
+    return snprintf(buff, PAGE_SIZE, "%llu", ktime_to_ns(g_fbi.vsync_timestamp[0]));
+}
+static DEVICE_ATTR(vsync0_time, S_IRUGO, vsync0_time, NULL);
+
 static void send_vsync_work_0(struct work_struct *work)
 {
-	char buf[64];
-	char *envp[2];
-
-	snprintf(buf, sizeof(buf), "VSYNC0=%llu",ktime_to_ns(g_fbi.vsync_timestamp[0]));
-	envp[0] = buf;
-	envp[1] = NULL;
-	kobject_uevent_env(&g_fbi.dev->kobj, KOBJ_CHANGE, envp);
-	fcount_data.vsync_count[0] ++;
+    sysfs_notify(&g_fbi.dev->kobj, NULL, "vsync0_time");
 }
 
 static void send_vsync_work_1(struct work_struct *work)
@@ -1280,6 +1279,7 @@ s32 Fb_Init(void)
 	s32 i;
 	bool need_open_hdmi = 0;
 	u32 num_screens;
+    int ret;
 
 	num_screens = bsp_disp_feat_get_num_screens();
 
@@ -1293,6 +1293,11 @@ s32 Fb_Init(void)
 	INIT_WORK(&g_fbi.vsync_work[1], send_vsync_work_1);
 	INIT_WORK(&g_fbi.vsync_work[2], send_vsync_work_2);
 	disp_register_sync_finish_proc(DRV_disp_int_process);
+
+    ret = device_create_file(g_fbi.dev, &dev_attr_vsync0_time);
+    if (ret) {
+        dev_err(g_fbi.dev, "Failed to add vsync0_time sysfs\n");
+    }
 
 	for(i=0; i<8; i++) {
 		g_fbi.fbinfo[i] = framebuffer_alloc(0, g_fbi.dev);
