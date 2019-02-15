@@ -1402,8 +1402,8 @@ static int gsl_ts_suspend(struct i2c_client *client, pm_message_t mesg)
                 cancel_work_sync(&ts->work);
                 flush_workqueue(ts->wq);
                 gslX680_shutdown_low(); 
-                input_set_power_enable(&(config_info.input_type), 1);
         }
+		input_set_power_enable(&(config_info.input_type), 0);
         
         return 0;
 	
@@ -1413,13 +1413,12 @@ static int gsl_ts_resume(struct i2c_client *client)
 {
 	
 	struct gsl_ts *ts = i2c_get_clientdata(client);
+	input_set_power_enable(&(config_info.input_type), 1);
 	
 	ts->is_suspended = true;
   	dprintk(DEBUG_SUSPEND,"I'am in gsl_ts_resume() start\n");
   	cancel_work_sync(&ts->work);
 	flush_workqueue(ts->wq);
-    input_set_power_enable(&(config_info.input_type), 1);
-    msleep(10);
 	queue_work(gslX680_resume_wq, &glsX680_resume_work);
 	
 #ifdef GSL_TIMER
@@ -1555,6 +1554,7 @@ static int __devinit gsl_ts_probe(struct i2c_client *client,
 	struct gsl_ts *ts;
 	int rc = 0;
 
+	input_set_power_enable(&(config_info.input_type), 1);
 	printk("GSLX680 Enter %s\n", __func__);
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		dev_err(&client->dev, "I2C functionality not supported\n");
@@ -1630,6 +1630,7 @@ static int __devinit gsl_ts_probe(struct i2c_client *client,
 #endif
 
 
+	input_set_power_enable(&(config_info.input_type), 1);
 	
 	dprintk(DEBUG_INIT,"[GSLX680] End %s\n", __func__);
 	return 0;
@@ -1727,6 +1728,8 @@ static int __init gsl_ts_init(void)
 {
 
 	int ret = -1;
+        
+	input_set_power_enable(&(config_info.input_type), 1);
 	dprintk(DEBUG_INIT,"****************************************************************\n");
 	if (input_fetch_sysconfig_para(&(config_info.input_type))) {
 		printk("%s: ctp_fetch_sysconfig_para err.\n", __func__);
@@ -1747,8 +1750,8 @@ static int __init gsl_ts_init(void)
 		return ret;
 	}
 
-    input_set_power_enable(&(config_info.input_type), 1);
-    msleep(10);
+        input_set_power_enable(&(config_info.input_type), 1);
+        msleep(20);
 	ctp_wakeup(1,0);
 
 	ret = i2c_add_driver(&gsl_ts_driver);
