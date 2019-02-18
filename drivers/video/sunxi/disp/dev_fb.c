@@ -152,7 +152,7 @@ s32 parser_disp_init_para(disp_init_para * init_para)
 	}
 
 	//fb0
-	init_para->buffer_num[0]= 2;
+	init_para->buffer_num[0]= 3;
 
 	if(OSAL_Script_FetchParser_Data("disp_init", "fb0_format", &value, 1) < 0) {
 		__wrn("fetch script data disp_init.fb0_format fail\n");
