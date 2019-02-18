@@ -152,7 +152,7 @@ s32 parser_disp_init_para(disp_init_para * init_para)
 	}
 
 	//fb0
-	init_para->buffer_num[0]= 2;
+	init_para->buffer_num[0]= 3;
 
 	if(OSAL_Script_FetchParser_Data("disp_init", "fb0_format", &value, 1) < 0) {
 		__wrn("fetch script data disp_init.fb0_format fail\n");
@@ -179,7 +179,7 @@ s32 parser_disp_init_para(disp_init_para * init_para)
 	init_para->fb_height[0]= value;
 
 	//fb1
-	init_para->buffer_num[1]= 2;
+	init_para->buffer_num[1]= 3;
 
 	if(OSAL_Script_FetchParser_Data("disp_init", "fb1_format", &value, 1) < 0) {
 		__wrn("fetch script data disp_init.fb1_format fail\n");
@@ -202,7 +202,7 @@ s32 parser_disp_init_para(disp_init_para * init_para)
 	init_para->fb_height[1]= value;
 
 	//fb2
-	init_para->buffer_num[2]= 2;
+	init_para->buffer_num[2]= 3;
 
 	if(OSAL_Script_FetchParser_Data("disp_init", "fb2_format", &value, 1) < 0) {
 		__wrn("fetch script data disp_init.fb2_format fail\n");
